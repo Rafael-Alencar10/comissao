@@ -1,0 +1,779 @@
+{
+  "id": "1a2fa559-f77c-44d4-98dd-49a4b7bfbe19",
+  "prevId": "00000000-0000-0000-0000-000000000000",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.atendentes": {
+      "name": "atendentes",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "type": "always",
+            "name": "atendentes_id_seq",
+            "schema": "public",
+            "increment": "1",
+            "startWith": "1",
+            "minValue": "1",
+            "maxValue": "2147483647",
+            "cache": "1",
+            "cycle": false
+          }
+        },
+        "nome": {
+          "name": "nome",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "turno": {
+          "name": "turno",
+          "type": "turno",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tipoAtuacao": {
+          "name": "tipoAtuacao",
+          "type": "tipo_atuacao",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "status_atendente",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'Ativo'"
+        },
+        "tolerancia": {
+          "name": "tolerancia",
+          "type": "numeric(5, 2)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'0'"
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.atendimentosDetalhados": {
+      "name": "atendimentosDetalhados",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "type": "always",
+            "name": "atendimentosDetalhados_id_seq",
+            "schema": "public",
+            "increment": "1",
+            "startWith": "1",
+            "minValue": "1",
+            "maxValue": "2147483647",
+            "cache": "1",
+            "cycle": false
+          }
+        },
+        "producaoMensalId": {
+          "name": "producaoMensalId",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "atendenteId": {
+          "name": "atendenteId",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "mes": {
+          "name": "mes",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ano": {
+          "name": "ano",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "dataAtendimento": {
+          "name": "dataAtendimento",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "nomeCliente": {
+          "name": "nomeCliente",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "tipo": {
+          "name": "tipo",
+          "type": "tipo_atendimento",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "nota": {
+          "name": "nota",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "auditoria": {
+          "name": "auditoria",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "massiva": {
+          "name": "massiva",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "retirarNota": {
+          "name": "retirarNota",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.notificacoes": {
+      "name": "notificacoes",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "type": "always",
+            "name": "notificacoes_id_seq",
+            "schema": "public",
+            "increment": "1",
+            "startWith": "1",
+            "minValue": "1",
+            "maxValue": "2147483647",
+            "cache": "1",
+            "cycle": false
+          }
+        },
+        "atendenteId": {
+          "name": "atendenteId",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tipo": {
+          "name": "tipo",
+          "type": "tipo_notificacao",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "titulo": {
+          "name": "titulo",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "mensagem": {
+          "name": "mensagem",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "mes": {
+          "name": "mes",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ano": {
+          "name": "ano",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "lida": {
+          "name": "lida",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.producaoMensal": {
+      "name": "producaoMensal",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "type": "always",
+            "name": "producaoMensal_id_seq",
+            "schema": "public",
+            "increment": "1",
+            "startWith": "1",
+            "minValue": "1",
+            "maxValue": "2147483647",
+            "cache": "1",
+            "cycle": false
+          }
+        },
+        "atendenteId": {
+          "name": "atendenteId",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "mes": {
+          "name": "mes",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ano": {
+          "name": "ano",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "chatTotal": {
+          "name": "chatTotal",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "chatNota5": {
+          "name": "chatNota5",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "chatNota4": {
+          "name": "chatNota4",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "chatNota3": {
+          "name": "chatNota3",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "chatNota2": {
+          "name": "chatNota2",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "chatNota1": {
+          "name": "chatNota1",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "chatSemNota": {
+          "name": "chatSemNota",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "ligacaoTotal": {
+          "name": "ligacaoTotal",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "ligacaoExtrementeSatisfeito": {
+          "name": "ligacaoExtrementeSatisfeito",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "ligacaoExcelente": {
+          "name": "ligacaoExcelente",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "ligacaoBom": {
+          "name": "ligacaoBom",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "ligacaoRegular": {
+          "name": "ligacaoRegular",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "ligacaoRuim": {
+          "name": "ligacaoRuim",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "ligacaoPessimo": {
+          "name": "ligacaoPessimo",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "pontosChat": {
+          "name": "pontosChat",
+          "type": "numeric(10, 2)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'0'"
+        },
+        "pontosLigacao": {
+          "name": "pontosLigacao",
+          "type": "numeric(10, 2)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'0'"
+        },
+        "pontosTotais": {
+          "name": "pontosTotais",
+          "type": "numeric(10, 2)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'0'"
+        },
+        "maxPontosChat": {
+          "name": "maxPontosChat",
+          "type": "numeric(10, 2)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'0'"
+        },
+        "maxPontosLigacao": {
+          "name": "maxPontosLigacao",
+          "type": "numeric(10, 2)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'0'"
+        },
+        "maxPontosTotais": {
+          "name": "maxPontosTotais",
+          "type": "numeric(10, 2)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'0'"
+        },
+        "atendimentosTotais": {
+          "name": "atendimentosTotais",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "performance": {
+          "name": "performance",
+          "type": "numeric(5, 2)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'0'"
+        },
+        "bonificacao": {
+          "name": "bonificacao",
+          "type": "numeric(10, 2)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'0'"
+        },
+        "elegivel": {
+          "name": "elegivel",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "motivoNaoElegivel": {
+          "name": "motivoNaoElegivel",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "semanas": {
+          "name": "semanas",
+          "type": "json",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.userCredentials": {
+      "name": "userCredentials",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "type": "always",
+            "name": "userCredentials_id_seq",
+            "schema": "public",
+            "increment": "1",
+            "startWith": "1",
+            "minValue": "1",
+            "maxValue": "2147483647",
+            "cache": "1",
+            "cycle": false
+          }
+        },
+        "username": {
+          "name": "username",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "passwordHash": {
+          "name": "passwordHash",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "role": {
+          "name": "role",
+          "type": "role",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'user'"
+        },
+        "status": {
+          "name": "status",
+          "type": "status_cred",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'ativo'"
+        },
+        "permissions": {
+          "name": "permissions",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "userCredentials_username_unique": {
+          "name": "userCredentials_username_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "username"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.users": {
+      "name": "users",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "type": "always",
+            "name": "users_id_seq",
+            "schema": "public",
+            "increment": "1",
+            "startWith": "1",
+            "minValue": "1",
+            "maxValue": "2147483647",
+            "cache": "1",
+            "cycle": false
+          }
+        },
+        "openId": {
+          "name": "openId",
+          "type": "varchar(64)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "email": {
+          "name": "email",
+          "type": "varchar(320)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "loginMethod": {
+          "name": "loginMethod",
+          "type": "varchar(64)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "role": {
+          "name": "role",
+          "type": "role",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'user'"
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "lastSignedIn": {
+          "name": "lastSignedIn",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "users_openId_unique": {
+          "name": "users_openId_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "openId"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {
+    "public.role": {
+      "name": "role",
+      "schema": "public",
+      "values": [
+        "user",
+        "admin"
+      ]
+    },
+    "public.status_atendente": {
+      "name": "status_atendente",
+      "schema": "public",
+      "values": [
+        "Ativo",
+        "Inativo"
+      ]
+    },
+    "public.status_cred": {
+      "name": "status_cred",
+      "schema": "public",
+      "values": [
+        "ativo",
+        "inativo"
+      ]
+    },
+    "public.tipo_atendimento": {
+      "name": "tipo_atendimento",
+      "schema": "public",
+      "values": [
+        "chat",
+        "ligacao"
+      ]
+    },
+    "public.tipo_atuacao": {
+      "name": "tipo_atuacao",
+      "schema": "public",
+      "values": [
+        "Chat",
+        "Ligacao",
+        "Ambos"
+      ]
+    },
+    "public.tipo_notificacao": {
+      "name": "tipo_notificacao",
+      "schema": "public",
+      "values": [
+        "desempenho_baixo",
+        "elegibilidade_alterada",
+        "meta_atingida",
+        "alerta_geral"
+      ]
+    },
+    "public.turno": {
+      "name": "turno",
+      "schema": "public",
+      "values": [
+        "A",
+        "B",
+        "C"
+      ]
+    }
+  },
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}
