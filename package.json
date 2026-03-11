@@ -23,9 +23,3 @@
     "drizzle-kit": "^0.20.0"
   }
 }
-
-
-**Variáveis de ambiente no Render** (aba Environment):
-```
-NODE_ENV=production
-DATABASE_URL=postgresql: //postgres:[SENHA]@db.[PROJETO].supabase.co:5432/postgres
