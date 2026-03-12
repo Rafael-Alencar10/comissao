@@ -17,16 +17,19 @@ export default function Login() {
 
   const loginMutation = trpc.auth.login.useMutation({
     onSuccess: async (data) => {
-      // Store auth token/session
       localStorage.setItem("user", JSON.stringify(data));
 
-      // Invalidate and refetch the me query to update auth state
-      // Wait for the refetch to complete before redirecting
+      // Aguarda o cookie ser definido antes de buscar o usuário
+      await new Promise(resolve => setTimeout(resolve, 500));
+
       await utils.auth.me.invalidate();
       const result = await utils.auth.me.fetch();
 
       if (result) {
-        // User data is now available, safe to redirect
+        toast.success("Login realizado com sucesso!");
+        setLocation("/");
+      } else {
+        // Redireciona mesmo se o fetch falhar, pois o login foi bem sucedido
         toast.success("Login realizado com sucesso!");
         setLocation("/");
       }
