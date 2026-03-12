@@ -52,7 +52,7 @@ export function serveStatic(app: Express) {
   // Always serve the built `dist/public` directory in production. During
   // development Vite's middleware is used instead (setupVite), so this
   // function should point to the final build output.
-  const distPath = path.resolve(import.meta.dirname, "../..", "dist", "public");
+  const distPath = path.resolve(import.meta.dirname, "public");
 
   if (!fs.existsSync(distPath)) {
     console.error(
