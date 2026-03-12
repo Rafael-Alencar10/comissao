@@ -48,22 +48,18 @@ export async function setupVite(app: Express, server: Server) {
 }
 
 export function serveStatic(app: Express) {
-  // The built client is placed in `dist/public` by Vite (see root/vite.config.ts).
-  // Always serve the built `dist/public` directory in production. During
-  // development Vite's middleware is used instead (setupVite), so this
-  // function should point to the final build output.
   const distPath = path.resolve(import.meta.dirname, "public");
-
   if (!fs.existsSync(distPath)) {
     console.error(
-      `Could not find the build directory: ${distPath}, make sure to build the client first (run \"npm run build\")`
+      `Could not find the build directory: ${distPath}, make sure to build the client first (run "npm run build")`
     );
   }
-
   app.use(express.static(distPath));
-
-  // fall through to index.html if the file doesn't exist
-  app.use("*", (_req, res) => {
+  // fall through to index.html if the file doesn't exist (but not for API routes)
+  app.use("*", (_req, res, next) => {
+    if (_req.originalUrl.startsWith("/api")) {
+      return next();
+    }
     res.sendFile(path.resolve(distPath, "index.html"));
   });
 }
