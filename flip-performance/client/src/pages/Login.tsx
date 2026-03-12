@@ -13,10 +13,13 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [, setLocation] = useLocation();
+  const utils = trpc.useUtils();
 
   const loginMutation = trpc.auth.login.useMutation({
     onSuccess: async (data) => {
       localStorage.setItem("user", JSON.stringify(data));
+      // Invalida o cache do auth.me para forçar o useAuth() a recarregar
+      await utils.auth.me.invalidate();
       toast.success("Login realizado com sucesso!");
       setLocation("/");
     },
