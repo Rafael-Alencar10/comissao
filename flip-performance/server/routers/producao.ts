@@ -218,7 +218,13 @@ export const producaoRouter = router({
         input.ano
       );
 
-      const toleranciaAtendente = parseFloat(atendente.tolerancia?.toString() || "0");
+      const toleranciaFallback = parseFloat(atendente.tolerancia?.toString() || "0");
+      const toleranciaAtendente = await db.getToleranciaForMonth(
+        input.atendenteId,
+        input.mes,
+        input.ano,
+        toleranciaFallback
+      );
 
       const mergedData = { ...input, ...dataParaCalculo };
       const calculo = calcularProducao(
@@ -345,7 +351,13 @@ export const producaoRouter = router({
       const dataParaCalculo = recalcularTotaisDeSemanas(input.data.semanas, fallbackCounts);
       const mergedData = { ...baseMerge, ...dataParaCalculo };
 
-      const toleranciaAtendente = parseFloat(atendente.tolerancia?.toString() || "0");
+      const toleranciaFallback = parseFloat(atendente.tolerancia?.toString() || "0");
+      const toleranciaAtendente = await db.getToleranciaForMonth(
+        producao.atendenteId,
+        producao.mes,
+        producao.ano,
+        toleranciaFallback
+      );
       const calculo = calcularProducao(mergedData as any, mediaAtendimentosTurno, toleranciaAtendente);
 
       const dataToUpdate = {
@@ -425,8 +437,12 @@ export const producaoRouter = router({
   debugElegibilidade: protectedProcedure
     .input(z.object({ mes: z.number(), ano: z.number() }))
     .query(async ({ input }) => {
-      const producoes = await db.getProducaoMensalByMesAno(input.mes, input.ano);
-      const atendentes = await db.getAtendentes();
+      const [producoes, atendentes, toleranciasMensais] = await Promise.all([
+        db.getProducaoMensalByMesAno(input.mes, input.ano),
+        db.getAtendentes(),
+        db.getToleranciaMensalPorMesAno(input.mes, input.ano),
+      ]);
+      const toleranciaMap = new Map(toleranciasMensais.map((t) => [t.atendenteId, t.tolerancia]));
 
       return producoes.map((p) => {
         const atendente = atendentes.find((a) => a.id === p.atendenteId);
@@ -458,7 +474,8 @@ export const producaoRouter = router({
         );
 
         const performance = parseFloat(p.performance as any);
-        const toleranciaAtendente = parseFloat(atendente?.tolerancia?.toString() || "0");
+        const toleranciaFallback = parseFloat(atendente?.tolerancia?.toString() || "0");
+        const toleranciaAtendente = toleranciaMap.get(p.atendenteId) ?? toleranciaFallback;
 
         // CORRIGIDO: usa verificarElegibilidade com os 4 parâmetros corretos (incluindo tolerância)
         const { elegivel, motivo } = verificarElegibilidade(
@@ -494,11 +511,17 @@ export const producaoRouter = router({
       }
 
       const producoes = await db.getAllProducaoMensalByAtendente(input.atendenteId);
-      const toleranciaAtendente = parseFloat(atendente.tolerancia?.toString() || "0");
+      const toleranciaFallback = parseFloat(atendente.tolerancia?.toString() || "0");
 
       let updatedCount = 0;
 
       for (const producao of producoes) {
+        const toleranciaAtendente = await db.getToleranciaForMonth(
+          producao.atendenteId,
+          producao.mes,
+          producao.ano,
+          toleranciaFallback
+        );
         const mediaAtendimentosTurno = await getMediaAtendimentosTurno(
           atendente.turno,
           producao.mes,

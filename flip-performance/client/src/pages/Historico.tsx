@@ -22,10 +22,16 @@ export default function Historico() {
 
   const atendenteQuery = trpc.atendentes.list.useQuery();
   const producaoQuery = trpc.producao.getByMesAno.useQuery({ mes, ano });
+  const { data: toleranciasMensais = [] } = trpc.toleranciaMensal.getByMesAno.useQuery({ mes, ano });
   const deleteProducaoMutation = trpc.producao.delete.useMutation();
 
   const atendentes = atendenteQuery.data || [];
   const producoes = producaoQuery.data || [];
+  const toleranciaMap = useMemo(() => {
+    const m = new Map<number, number>();
+    for (const t of toleranciasMensais) m.set(t.atendenteId, t.tolerancia);
+    return m;
+  }, [toleranciasMensais]);
 
   const producoesRecalc = useMemo(() => {
     return producoes.map((producao) => {
@@ -45,12 +51,12 @@ export default function Historico() {
         producoesDoTurno.map((p) => ({ chatTotal: p.chatTotal, ligacaoTotal: p.ligacaoTotal }))
       );
 
-      // CORRIGIDO: 4 parâmetros — inclui tolerância do atendente
+      const tolerancia = atendente ? (toleranciaMap.get(atendente.id) ?? parseFloat(atendente.tolerancia?.toString() || "0")) : 0;
       const { elegivel: elegivelRecalc, motivo } = verificarElegibilidade(
         performanceRecalc,
         totalAtendimentos,
         mediaAtendimentosTurno,
-        atendente?.tolerancia || 0
+        tolerancia
       );
 
       return {
@@ -64,7 +70,7 @@ export default function Historico() {
         bonificacao: (elegivelRecalc ? calcularBonificacao(performanceRecalc) : 0).toString(),
       };
     });
-  }, [producoes, atendentes]);
+  }, [producoes, atendentes, toleranciaMap]);
 
   const filteredProducoes = producoesRecalc.filter((p) => {
     const atendente = atendentes.find((a) => a.id === p.atendenteId);

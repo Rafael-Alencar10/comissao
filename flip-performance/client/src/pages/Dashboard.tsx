@@ -12,9 +12,15 @@ export default function Dashboard() {
 
   const producaoQuery = trpc.producao.getByMesAno.useQuery({ mes, ano });
   const atendentesQuery = trpc.atendentes.list.useQuery();
+  const { data: toleranciasMensais = [] } = trpc.toleranciaMensal.getByMesAno.useQuery({ mes, ano });
 
   const producoes = producaoQuery.data || [];
   const atendentes = atendentesQuery.data || [];
+  const toleranciaMap = useMemo(() => {
+    const m = new Map<number, number>();
+    for (const t of toleranciasMensais) m.set(t.atendenteId, t.tolerancia);
+    return m;
+  }, [toleranciasMensais]);
 
   const producoesComElegibilidade = useMemo(() => {
     return producoes.map((producao) => {
@@ -49,7 +55,7 @@ export default function Dashboard() {
         bonificacao: (elegivelRecalc ? calcularBonificacao(performanceRecalc) : 0).toString(),
       };
     });
-  }, [producoes, atendentes]);
+  }, [producoes, atendentes, toleranciaMap]);
 
   const totalChatAtendimentos = producoesComElegibilidade.reduce((sum, p) => sum + p.chatTotal, 0);
   const totalLigacaoAtendimentos = producoesComElegibilidade.reduce((sum, p) => sum + p.ligacaoTotal, 0);

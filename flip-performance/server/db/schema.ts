@@ -97,6 +97,18 @@ export const atendimentosDetalhados = pgTable("atendimentosDetalhados", {
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
 
+/** Tolerância por atendente por mês. Quando > 5%, justificativa é obrigatória. */
+export const toleranciaMensal = pgTable("toleranciaMensal", {
+  id: integer("id").generatedAlwaysAsIdentity().primaryKey(),
+  atendenteId: integer("atendenteId").notNull(),
+  mes: integer("mes").notNull(),
+  ano: integer("ano").notNull(),
+  tolerancia: decimal("tolerancia", { precision: 5, scale: 2 }).notNull().default("0"),
+  justificativaToleranciaAlta: text("justificativaToleranciaAlta"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+});
+
 export const notificacoes = pgTable("notificacoes", {
   id: integer("id").generatedAlwaysAsIdentity().primaryKey(),
   atendenteId: integer("atendenteId").notNull(),

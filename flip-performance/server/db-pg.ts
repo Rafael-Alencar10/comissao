@@ -1,7 +1,7 @@
 import { eq, and, desc } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
-import { InsertUser, users, atendentes, Atendente, InsertAtendente, producaoMensal, ProducaoMensal, InsertProducaoMensal, notificacoes, Notificacao, InsertNotificacao, userCredentials, UserCredential, InsertUserCredential, atendimentosDetalhados, AtendimentoDetalhado, InsertAtendimentoDetalhado } from "./db/schema";
+import { InsertUser, users, atendentes, Atendente, InsertAtendente, producaoMensal, ProducaoMensal, InsertProducaoMensal, notificacoes, Notificacao, InsertNotificacao, userCredentials, UserCredential, InsertUserCredential, atendimentosDetalhados, AtendimentoDetalhado, InsertAtendimentoDetalhado, toleranciaMensal } from "./db/schema";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 let _client: postgres.Sql | null = null;
@@ -443,4 +443,97 @@ export async function getNotificacoesRecentes(mes: number, ano: number, limit: n
     .where(and(eq(notificacoes.mes, mes), eq(notificacoes.ano, ano)))
     .orderBy(desc(notificacoes.createdAt))
     .limit(limit);
+}
+
+// --- Tolerância Mensal (aplica somente ao mês vigente) ---
+
+export type ToleranciaMensalRecord = { atendenteId: number; tolerancia: number; justificativaToleranciaAlta: string | null };
+
+export async function getToleranciaMensalPorMesAno(mes: number, ano: number): Promise<ToleranciaMensalRecord[]> {
+  const db = await getDb();
+  if (!db) return [];
+
+  const rows = await db
+    .select({
+      atendenteId: toleranciaMensal.atendenteId,
+      tolerancia: toleranciaMensal.tolerancia,
+      justificativaToleranciaAlta: toleranciaMensal.justificativaToleranciaAlta,
+    })
+    .from(toleranciaMensal)
+    .where(and(eq(toleranciaMensal.mes, mes), eq(toleranciaMensal.ano, ano)));
+
+  return rows.map((r) => ({
+    atendenteId: r.atendenteId,
+    tolerancia: parseFloat(r.tolerancia?.toString() || "0"),
+    justificativaToleranciaAlta: r.justificativaToleranciaAlta ?? null,
+  }));
+}
+
+/** Retorna tolerância para (atendenteId, mes, ano). Prioriza toleranciaMensal; fallback: atendentes.tolerancia. */
+export async function getToleranciaForMonth(
+  atendenteId: number,
+  mes: number,
+  ano: number,
+  fallbackTolerancia: number
+): Promise<number> {
+  const db = await getDb();
+  if (!db) return fallbackTolerancia;
+
+  const result = await db
+    .select({ tolerancia: toleranciaMensal.tolerancia })
+    .from(toleranciaMensal)
+    .where(
+      and(
+        eq(toleranciaMensal.atendenteId, atendenteId),
+        eq(toleranciaMensal.mes, mes),
+        eq(toleranciaMensal.ano, ano)
+      )
+    )
+    .limit(1);
+
+  if (result.length > 0) {
+    return parseFloat(result[0].tolerancia?.toString() || "0");
+  }
+  return fallbackTolerancia;
+}
+
+export async function upsertToleranciaMensal(params: {
+  atendenteId: number;
+  mes: number;
+  ano: number;
+  tolerancia: number;
+  justificativaToleranciaAlta?: string | null;
+}): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const existing = await db
+    .select()
+    .from(toleranciaMensal)
+    .where(
+      and(
+        eq(toleranciaMensal.atendenteId, params.atendenteId),
+        eq(toleranciaMensal.mes, params.mes),
+        eq(toleranciaMensal.ano, params.ano)
+      )
+    )
+    .limit(1);
+
+  const setValues = {
+    tolerancia: params.tolerancia.toString(),
+    justificativaToleranciaAlta: params.justificativaToleranciaAlta ?? null,
+    updatedAt: new Date(),
+  };
+
+  if (existing.length > 0) {
+    await db.update(toleranciaMensal).set(setValues).where(eq(toleranciaMensal.id, existing[0].id));
+  } else {
+    await db.insert(toleranciaMensal).values({
+      atendenteId: params.atendenteId,
+      mes: params.mes,
+      ano: params.ano,
+      tolerancia: params.tolerancia.toString(),
+      justificativaToleranciaAlta: params.justificativaToleranciaAlta ?? null,
+    });
+  }
 }

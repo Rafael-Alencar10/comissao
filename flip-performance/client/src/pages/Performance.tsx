@@ -3,11 +3,16 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { trpc } from "@/lib/trpc";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { toast } from "sonner";
 import { useState, useMemo } from "react";
-import { TrendingUp, CheckCircle, Trophy, Medal, Calendar } from "lucide-react";
+import { TrendingUp, CheckCircle, Trophy, Medal, Calendar, Edit2, AlertTriangle } from "lucide-react";
 import { ExportPDFButton } from "@/components/ExportPDFButton";
 import {
   verificarElegibilidade,
@@ -30,16 +35,48 @@ export default function Performance() {
   const { data: attendentes = [] } = trpc.atendentes.list.useQuery();
   const { data: producoes = [] } = trpc.producao.getByMesAno.useQuery({ mes: selectedMonth, ano: selectedYear });
   const { data: todasProducoes = [] } = trpc.producao.getByMesAno.useQuery({ mes: selectedMonth, ano: selectedYear });
+  const { data: toleranciasMensais = [] } = trpc.toleranciaMensal.getByMesAno.useQuery({ mes: selectedMonth, ano: selectedYear });
+
+  const utils = trpc.useUtils();
+  const upsertToleranciaMutation = trpc.toleranciaMensal.upsert.useMutation({
+    onSuccess: () => {
+      utils.toleranciaMensal.getByMesAno.invalidate({ mes: selectedMonth, ano: selectedYear });
+      utils.producao.getByMesAno.invalidate({ mes: selectedMonth, ano: selectedYear });
+      setEditToleranciaDialog(null);
+      toast.success("Tolerância atualizada");
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
+  const toleranciaMap = useMemo(() => {
+    const m = new Map<number, { tolerancia: number; justificativa: string | null }>();
+    for (const t of toleranciasMensais) {
+      m.set(t.atendenteId, { tolerancia: t.tolerancia, justificativa: t.justificativaToleranciaAlta });
+    }
+    return m;
+  }, [toleranciasMensais]);
+
+  const [editToleranciaDialog, setEditToleranciaDialog] = useState<{
+    atendenteId: number;
+    nome: string;
+    tolerancia: number;
+    justificativa: string;
+  } | null>(null);
 
   const performanceData = useMemo(() => {
     return attendentes
       .filter((a) => selectedTurno === "all" || a.turno === selectedTurno)
       .map((atendente) => {
         const producaoAtendente = producoes.filter((p) => p.atendenteId === atendente.id);
+        const toleranciaRecord = toleranciaMap.get(atendente.id);
+        const toleranciaVal = toleranciaRecord?.tolerancia ?? parseFloat(atendente.tolerancia?.toString() || "0");
+        const justificativaVal = toleranciaRecord?.justificativa ?? null;
 
         if (producaoAtendente.length === 0) {
           return {
             atendente,
+            tolerancia: toleranciaVal,
+            justificativaTolerancia: justificativaVal,
             chatTotal: 0,
             ligacaoTotal: 0,
             pontosTotais: 0,
@@ -92,12 +129,12 @@ export default function Performance() {
           producoesTurno.map((p) => ({ chatTotal: p.chatTotal, ligacaoTotal: p.ligacaoTotal }))
         );
 
-        // CORRIGIDO: 4 parâmetros — inclui tolerância do atendente
+        // Usa tolerância do mês (toleranciaMensal) ou fallback atendentes.tolerancia
         const { elegivel, motivo } = verificarElegibilidade(
           performance,
           totalAtendimentos,
           mediaAtendimentosTurno,
-          atendente.tolerancia || 0
+          toleranciaVal
         );
 
         // CORRIGIDO: usa calcularBonificacao centralizado
@@ -105,6 +142,8 @@ export default function Performance() {
 
         return {
           atendente,
+          tolerancia: toleranciaVal,
+          justificativaTolerancia: justificativaVal,
           chatTotal: totalChat,
           ligacaoTotal: totalLigacao,
           pontosTotais: Math.round(pontosTotais * 100) / 100,
@@ -127,7 +166,7 @@ export default function Performance() {
         }
         return b.performance - a.performance;
       });
-  }, [attendentes, producoes, selectedTurno]);
+  }, [attendentes, producoes, toleranciaMap, selectedTurno]);
 
   // Performance por turno para o gráfico
   const performanceByShift = useMemo(() => {
@@ -391,16 +430,20 @@ export default function Performance() {
                     <th className="p-2 text-right">Chats</th>
                     <th className="p-2 text-right">Ligações</th>
                     <th className="p-2 text-right">Atend.</th>
-                    {/* CORRIGIDO: renomeado para deixar claro que é mínimo de atendimentos */}
                     <th className="p-2 text-right">Mín. Turno</th>
+                    <th className="p-2 text-right">Tol.%</th>
                     <th className="p-2 text-right">Performance</th>
                     <th className="p-2 text-right">Pontos</th>
                     <th className="p-2 text-center">Status</th>
+                    <th className="p-2">Justificativa</th>
                     <th className="p-2">Motivo</th>
+                    <th className="p-2 w-10"></th>
                   </tr>
                 </thead>
                 <tbody>
-                  {performanceData.map((d) => (
+                  {performanceData.map((d) => {
+                    const precisaJustificativa = (d.tolerancia ?? 0) > 5 && !d.justificativaTolerancia?.trim();
+                    return (
                     <tr key={d.atendente.id} className="border-b hover:bg-muted/50">
                       <td className="p-2 font-medium">{d.atendente.nome}</td>
                       <td className="p-2">
@@ -409,8 +452,10 @@ export default function Performance() {
                       <td className="p-2 text-right">{d.chatTotal}</td>
                       <td className="p-2 text-right">{d.ligacaoTotal}</td>
                       <td className="p-2 text-right font-semibold">{d.atendimentosTotais}</td>
-                      {/* CORRIGIDO: exibe mínimo de atendimentos do turno (não média de performance) */}
                       <td className="p-2 text-right">{Math.ceil(d.mediaAtendimentosTurno)}</td>
+                      <td className="p-2 text-right">
+                        {(d.tolerancia ?? 0) > 0 ? `${d.tolerancia}%` : "—"}
+                      </td>
                       <td className="p-2 text-right font-semibold">{d.performance.toFixed(2)}%</td>
                       <td className="p-2 text-right">{d.pontosTotais}</td>
                       <td className="p-2 text-center">
@@ -420,15 +465,108 @@ export default function Performance() {
                           <Badge variant="destructive" className="bg-red-500/20 text-red-400 border-red-500/30">✗ Excluído</Badge>
                         )}
                       </td>
+                      <td className="p-2 text-sm max-w-[200px]">
+                        {precisaJustificativa ? (
+                          <Badge variant="outline" className="bg-amber-500/10 text-amber-500 border-amber-500/30 text-xs">
+                            <AlertTriangle className="h-3 w-3 mr-1" /> Obrigatória
+                          </Badge>
+                        ) : d.justificativaTolerancia ? (
+                          <span className="truncate block" title={d.justificativaTolerancia}>{d.justificativaTolerancia}</span>
+                        ) : (
+                          "—"
+                        )}
+                      </td>
                       <td className="p-2 text-sm text-muted-foreground">{d.motivo || '-'}</td>
+                      <td className="p-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => setEditToleranciaDialog({
+                            atendenteId: d.atendente.id,
+                            nome: d.atendente.nome,
+                            tolerancia: d.tolerancia ?? 0,
+                            justificativa: d.justificativaTolerancia ?? "",
+                          })}
+                          title="Definir tolerância e justificativa"
+                        >
+                          <Edit2 className="h-4 w-4" />
+                        </Button>
+                      </td>
                     </tr>
-                  ))}
+                  );})}
                 </tbody>
               </table>
             </div>
           </CardContent>
         </Card>
       </div>
+
+      <Dialog open={!!editToleranciaDialog} onOpenChange={(open) => !open && setEditToleranciaDialog(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Tolerância e Justificativa</DialogTitle>
+            <DialogDescription>
+              {editToleranciaDialog && (
+                <>Defina a tolerância para <strong>{editToleranciaDialog.nome}</strong> no mês de {format(new Date(selectedYear, selectedMonth - 1), "MMMM/yyyy", { locale: ptBR })}. Tolerância maior que 5% exige justificativa.</>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          {editToleranciaDialog && (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                const form = e.target as HTMLFormElement;
+                const tolerancia = parseFloat((form.tolerancia as HTMLInputElement)?.value || "0");
+                const justificativa = (form.justificativa as HTMLTextAreaElement)?.value?.trim() ?? "";
+                if (tolerancia > 5 && !justificativa) {
+                  toast.error("Tolerância maior que 5% exige justificativa.");
+                  return;
+                }
+                upsertToleranciaMutation.mutate({
+                  atendenteId: editToleranciaDialog.atendenteId,
+                  mes: selectedMonth,
+                  ano: selectedYear,
+                  tolerancia,
+                  justificativaToleranciaAlta: justificativa || null,
+                });
+              }}
+              className="space-y-4"
+            >
+              <div>
+                <Label htmlFor="tolerancia">Tolerância (%)</Label>
+                <Input
+                  id="tolerancia"
+                  name="tolerancia"
+                  type="number"
+                  min={0}
+                  max={100}
+                  step={0.5}
+                  defaultValue={editToleranciaDialog.tolerancia}
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label htmlFor="justificativa">
+                  Justificativa <span className="text-amber-500">(obrigatória se &gt; 5%)</span>
+                </Label>
+                <Textarea
+                  id="justificativa"
+                  name="justificativa"
+                  placeholder="Ex: Afastamento médico, treinamento..."
+                  defaultValue={editToleranciaDialog.justificativa}
+                  rows={3}
+                  className="mt-1"
+                />
+              </div>
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setEditToleranciaDialog(null)}>Cancelar</Button>
+                <Button type="submit" disabled={upsertToleranciaMutation.isPending}>Salvar</Button>
+              </DialogFooter>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

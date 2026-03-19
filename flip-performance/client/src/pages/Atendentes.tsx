@@ -1,14 +1,17 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { trpc } from "@/lib/trpc";
-import { Plus, Trash2, Edit2, Search, ChevronDown } from "lucide-react";
+import { Plus, Trash2, Edit2, Search, ChevronDown, Calendar } from "lucide-react";
 import { toast } from "sonner";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 export default function Atendentes() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -24,7 +27,24 @@ export default function Atendentes() {
     tolerancia: 0,
   });
 
+  const [mesTolerancia, setMesTolerancia] = useState(new Date().getMonth() + 1);
+  const [anoTolerancia, setAnoTolerancia] = useState(new Date().getFullYear());
+  const [toleranciaMensalVal, setToleranciaMensalVal] = useState<number>(0);
+  const [justificativaMensalVal, setJustificativaMensalVal] = useState("");
+
   const atendentesQuery = trpc.atendentes.list.useQuery();
+  const { data: toleranciasDoMes = [] } = trpc.toleranciaMensal.getByMesAno.useQuery(
+    { mes: mesTolerancia, ano: anoTolerancia },
+    { enabled: !!editingId }
+  );
+  const utils = trpc.useUtils();
+  const upsertToleranciaMutation = trpc.toleranciaMensal.upsert.useMutation({
+    onSuccess: () => {
+      utils.toleranciaMensal.getByMesAno.invalidate({ mes: mesTolerancia, ano: anoTolerancia });
+      toast.success("Tolerância do mês salva");
+    },
+    onError: (err) => toast.error(err.message),
+  });
   const createMutation = trpc.atendentes.create.useMutation({
     onSuccess: () => {
       atendentesQuery.refetch();
@@ -92,20 +112,53 @@ export default function Atendentes() {
       return;
     }
 
+    const dataToSend = {
+      ...formData,
+      tolerancia: typeof formData.tolerancia === "string" ? parseFloat(formData.tolerancia) || 0 : Number(formData.tolerancia) || 0,
+    };
+
     if (editingId) {
       updateMutation.mutate({
         id: editingId,
-        data: formData,
+        data: dataToSend,
       });
     } else {
-      createMutation.mutate(formData);
+      createMutation.mutate(dataToSend);
     }
   };
 
   const handleEdit = (atendente: any) => {
-    setFormData(atendente);
+    setFormData({
+      ...atendente,
+      tolerancia: typeof atendente.tolerancia === "string" ? parseFloat(atendente.tolerancia) || 0 : Number(atendente.tolerancia) || 0,
+    });
     setEditingId(atendente.id);
+    setMesTolerancia(new Date().getMonth() + 1);
+    setAnoTolerancia(new Date().getFullYear());
     setIsDialogOpen(true);
+  };
+
+  useEffect(() => {
+    if (editingId && toleranciasDoMes.length >= 0) {
+      const rec = toleranciasDoMes.find((t) => t.atendenteId === editingId);
+      setToleranciaMensalVal(rec?.tolerancia ?? 0);
+      setJustificativaMensalVal(rec?.justificativaToleranciaAlta ?? "");
+    }
+  }, [editingId, toleranciasDoMes]);
+
+  const handleSalvarToleranciaMes = () => {
+    if (!editingId) return;
+    if (toleranciaMensalVal > 5 && !justificativaMensalVal.trim()) {
+      toast.error("Tolerância maior que 5% exige justificativa.");
+      return;
+    }
+    upsertToleranciaMutation.mutate({
+      atendenteId: editingId,
+      mes: mesTolerancia,
+      ano: anoTolerancia,
+      tolerancia: toleranciaMensalVal,
+      justificativaToleranciaAlta: justificativaMensalVal.trim() || null,
+    });
   };
 
   const handleDelete = (id: number) => {
@@ -320,8 +373,8 @@ export default function Atendentes() {
               </Select>
             </div>
             <div>
-              <label className="text-sm font-medium text-foreground">Tolerância (%)</label>
-              <div className="text-xs text-muted-foreground mb-1">Deixe em branco ou 0 para sem tolerância (padrão). Ex: 5 para 5% de margem</div>
+              <label className="text-sm font-medium text-foreground">Tolerância padrão (%)</label>
+              <div className="text-xs text-muted-foreground mb-1">Usada quando não há tolerância definida para um mês específico.</div>
               <Input
                 type="number"
                 min="0"
@@ -333,6 +386,79 @@ export default function Atendentes() {
                 className="mt-1 bg-muted border-border"
               />
             </div>
+            {editingId && (
+              <div className="space-y-3 rounded-lg border border-border p-4 bg-muted/30">
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm font-medium text-foreground">Tolerância para o mês</span>
+                </div>
+                <p className="text-xs text-muted-foreground">Defina a tolerância que vale apenas para um mês específico. Se &gt; 5%, justificativa é obrigatória.</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs text-muted-foreground">Mês</label>
+                    <Select value={mesTolerancia.toString()} onValueChange={(v) => setMesTolerancia(parseInt(v))}>
+                      <SelectTrigger className="mt-1 h-9 bg-background border-border">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+                          <SelectItem key={m} value={m.toString()}>
+                            {format(new Date(anoTolerancia, m - 1), "MMMM", { locale: ptBR })}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted-foreground">Ano</label>
+                    <Select value={anoTolerancia.toString()} onValueChange={(v) => setAnoTolerancia(parseInt(v))}>
+                      <SelectTrigger className="mt-1 h-9 bg-background border-border">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i).map((y) => (
+                          <SelectItem key={y} value={y.toString()}>{y}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground">Tolerância (%)</label>
+                  <Input
+                    type="number"
+                    min={0}
+                    max={100}
+                    step={0.5}
+                    value={toleranciaMensalVal || ""}
+                    onChange={(e) => setToleranciaMensalVal(e.target.value ? parseFloat(e.target.value) : 0)}
+                    className="mt-1 h-9 bg-background border-border"
+                  />
+                </div>
+                {toleranciaMensalVal > 5 && (
+                  <div>
+                    <label className="text-xs text-muted-foreground">Justificativa <span className="text-amber-500">(obrigatória)</span></label>
+                    <Textarea
+                      placeholder="Ex: Afastamento médico, treinamento..."
+                      value={justificativaMensalVal}
+                      onChange={(e) => setJustificativaMensalVal(e.target.value)}
+                      rows={2}
+                      className="mt-1 bg-background border-border text-sm"
+                    />
+                  </div>
+                )}
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleSalvarToleranciaMes}
+                  disabled={upsertToleranciaMutation.isPending || (toleranciaMensalVal > 5 && !justificativaMensalVal.trim())}
+                  className="border-border"
+                >
+                  {upsertToleranciaMutation.isPending ? "Salvando..." : `Salvar para ${format(new Date(anoTolerancia, mesTolerancia - 1), "MMMM/yyyy", { locale: ptBR })}`}
+                </Button>
+              </div>
+            )}
             {editingId && (
               <div className="pt-2">
                 <Button

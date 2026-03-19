@@ -14,9 +14,15 @@ export default function Comissoes() {
 
   const producaoQuery = trpc.producao.getByMesAno.useQuery({ mes, ano });
   const atendentesQuery = trpc.atendentes.list.useQuery();
+  const { data: toleranciasMensais = [] } = trpc.toleranciaMensal.getByMesAno.useQuery({ mes, ano });
 
   const producoes = producaoQuery.data || [];
   const atendentes = (atendentesQuery.data || []).filter((a) => a.status === "Ativo");
+  const toleranciaMap = useMemo(() => {
+    const m = new Map<number, number>();
+    for (const t of toleranciasMensais) m.set(t.atendenteId, t.tolerancia);
+    return m;
+  }, [toleranciasMensais]);
 
   const comissoesList = useMemo(() => {
     return producoes
@@ -38,12 +44,12 @@ export default function Comissoes() {
           producoesDoTurno.map((p) => ({ chatTotal: p.chatTotal, ligacaoTotal: p.ligacaoTotal }))
         );
 
-        // CORRIGIDO: 4 parâmetros — inclui tolerância do atendente
+        const tolerancia = toleranciaMap.get(atendente.id) ?? parseFloat(atendente.tolerancia?.toString() || "0");
         const { elegivel: elegivelRecalc, motivo } = verificarElegibilidade(
           performanceRecalc,
           totalAtendimentos,
           mediaAtendimentosTurno,
-          atendente.tolerancia || 0
+          tolerancia
         );
 
         return {
@@ -60,7 +66,7 @@ export default function Comissoes() {
         };
       })
       .filter(Boolean);
-  }, [producoes, atendentes]);
+  }, [producoes, atendentes, toleranciaMap]);
 
   const elegiveisCount = comissoesList.filter((p) => p.elegivelRecalc === 1).length;
   const naoElegiveisCount = comissoesList.filter((p) => p.elegivelRecalc === 0).length;

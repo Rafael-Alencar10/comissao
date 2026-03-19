@@ -13,9 +13,11 @@ export default function VisaoTurno() {
 
   const producaoQuery = trpc.producao.getByMesAno.useQuery({ mes, ano });
   const atendentesQuery = trpc.atendentes.list.useQuery();
+  const { data: toleranciasMensais = [] } = trpc.toleranciaMensal.getByMesAno.useQuery({ mes, ano });
 
   const producoes = producaoQuery.data || [];
   const atendentes = atendentesQuery.data || [];
+  const toleranciaMap = new Map(toleranciasMensais.map((t) => [t.atendenteId, t.tolerancia]));
 
   const atendentesDoTurno = atendentes.filter((a) => a.turno === turnoAtivo && a.status === "Ativo");
   const producoesDoTurno = producoes.filter((p) => {
@@ -41,12 +43,12 @@ export default function VisaoTurno() {
       // CORRIGIDO: usa calcularPerformance centralizado
       performance = calcularPerformance(producao);
 
-      // CORRIGIDO: 4 parâmetros — inclui tolerância do atendente
+      const tolerancia = toleranciaMap.get(atendente.id) ?? parseFloat(atendente.tolerancia?.toString() || "0");
       const { elegivel: elegivelResult } = verificarElegibilidade(
         performance,
         totalAtend,
         mediaAtendimentosTurno,
-        atendente.tolerancia || 0
+        tolerancia
       );
       elegivel = elegivelResult;
     }
