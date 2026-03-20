@@ -114,7 +114,7 @@ export default function Login() {
             </form>
 
             <div className="text-center text-xs text-muted-foreground pt-4">
-              <p>Desenvolvido por: <a href="https://arelph.com" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">Arelph - Sistemas de gestão</a></p>
+              <p>Desenvolvido por: <a href="https://arelph-grow-flow.lovable.app" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">Arelph - Sistemas de gestão</a></p>
               <div className="flex justify-center mt-2">
                 <img src="/arelph-logo.png" alt="Arelph - Sistemas de gestão" className="w-16 h-16 object-contain" />
               </div>
