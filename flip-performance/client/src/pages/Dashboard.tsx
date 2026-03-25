@@ -40,12 +40,14 @@ export default function Dashboard() {
         producoesDoTurno.map((p) => ({ chatTotal: p.chatTotal, ligacaoTotal: p.ligacaoTotal }))
       );
 
-      // CORRIGIDO: 4 parâmetros — inclui tolerância do atendente
+      const tolerancia = atendente ? (toleranciaMap.get(atendente.id) ?? parseFloat(atendente.tolerancia?.toString() || "0")) : 0;
+
+      // CORRIGIDO: 4 parâmetros — inclui tolerância do atendente (atualizada pelo toleranciaMap)
       const { elegivel: elegivelRecalc } = verificarElegibilidade(
         performanceRecalc,
         totalAtendimentos,
         mediaAtendimentosTurno,
-        atendente?.tolerancia || 0
+        tolerancia
       );
 
       return {
