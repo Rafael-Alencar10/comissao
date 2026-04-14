@@ -12,6 +12,7 @@ import { CalendarIcon } from "lucide-react";
 import { AlertCircle, MessageSquare, Phone, ArrowLeft } from "lucide-react";
 import { Eye } from "lucide-react";
 import { toast } from "sonner";
+import { LancamentoPDFButton } from "./LancamentoPDFButton";
 
 import { BONIFICACAO_TABLE } from "@shared/bonificacao-rules";
 
@@ -30,6 +31,8 @@ interface LancamentoPageProps {
   onBack: () => void;
   isLoading?: boolean;
   atendimentosDetalhados?: any[];
+  mes?: number;
+  ano?: number;
 }
 
 // Dados por semana para notas que não vêm da tabela de auditoria
@@ -59,6 +62,8 @@ export function LancamentoPage({
   onBack,
   isLoading = false,
   atendimentosDetalhados = [],
+  mes = new Date().getMonth() + 1,
+  ano = new Date().getFullYear(),
 }: LancamentoPageProps) {
   const [semanas, setSemanas] = useState([
     [{ cliente: "", obs: "", nota: "", massiva: false, retirarNota: false, tipo: "chat" }],
@@ -72,6 +77,7 @@ export function LancamentoPage({
 
   const [obsDialogOpen, setObsDialogOpen] = useState(false);
   const [obsDialogText, setObsDialogText] = useState("");
+  const [hasLoadedDetalhados, setHasLoadedDetalhados] = useState(false);
 
   // Totais agregados calculados (somente leitura, derivados)
   const [totaisAgregados, setTotaisAgregados] = useState({
@@ -142,10 +148,23 @@ export function LancamentoPage({
     }
   }, [producao]);
 
-  // Carrega atendimentos detalhados
+  // Carrega atendimentos detalhados uma única vez, sem sobrescrever alterações do usuário
   useEffect(() => {
     if (producao?.semanas?.length > 0) return;
     if (!atendimentosDetalhados?.length) return;
+    if (hasLoadedDetalhados) return;
+
+    const isDefaultState = semanas.length === 1 && semanas[0].length === 1 &&
+      semanas[0][0].cliente === "" &&
+      semanas[0][0].obs === "" &&
+      semanas[0][0].nota === "" &&
+      !semanas[0][0].massiva &&
+      !semanas[0][0].retirarNota;
+
+    if (!isDefaultState) {
+      setHasLoadedDetalhados(true);
+      return;
+    }
 
     console.log("📥 Carregando atendimentos detalhados:", atendimentosDetalhados);
 
@@ -189,7 +208,8 @@ export function LancamentoPage({
     setSemanas(novasSemanas.length > 0 ? novasSemanas : [[{ cliente: "", obs: "", nota: "", massiva: false, retirarNota: false, tipo: "chat" }]]);
     setDatasSemanas(novasDatas.length > 0 ? novasDatas : [{ start: null, end: null }]);
     setDadosPorSemana(novosDados.length > 0 ? novosDados : [dadosSemanaVazio()]);
-  }, [atendimentosDetalhados]);
+    setHasLoadedDetalhados(true);
+  }, [atendimentosDetalhados, hasLoadedDetalhados, producao?.semanas?.length, semanas]);
 
   // Recalcula todos os totais agregados sempre que semanas ou dadosPorSemana mudam
   useEffect(() => {
@@ -376,6 +396,37 @@ export function LancamentoPage({
           </p>
         </div>
         <div className="flex gap-2">
+          {atendente && (
+            <LancamentoPDFButton
+              atendenteId={atendente.id}
+              atendenteName={atendente.nome}
+              mes={mes}
+              ano={ano}
+              mediaDoTurno={mediaDoTurno}
+              semanas={semanas.map((week, index) => ({
+                start: datasSemanas[index]?.start?.toISOString() ?? null,
+                end: datasSemanas[index]?.end?.toISOString() ?? null,
+                atendimentos: week,
+              }))}
+              chatTotal={totaisAgregados.chatTotal}
+              chatNota5={totaisAgregados.chatNota5}
+              chatNota4={totaisAgregados.chatNota4}
+              chatNota3={totaisAgregados.chatNota3}
+              chatNota2={totaisAgregados.chatNota2}
+              chatNota1={totaisAgregados.chatNota1}
+              ligacaoTotal={totaisAgregados.ligacaoTotal}
+              ligacaoExtrementeSatisfeito={totaisAgregados.ligacaoExtrementeSatisfeito}
+              ligacaoExcelente={totaisAgregados.ligacaoExcelente}
+              ligacaoBom={totaisAgregados.ligacaoBom}
+              ligacaoRegular={totaisAgregados.ligacaoRegular}
+              ligacaoRuim={totaisAgregados.ligacaoRuim}
+              ligacaoPessimo={totaisAgregados.ligacaoPessimo}
+              performance={performance}
+              pontosTotais={Math.round(totalScore)}
+              bonificacao={bonificacao}
+              elegivel={elegivel}
+            />
+          )}
           <Button variant="default" size="sm" onClick={onBack} className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90">
             <ArrowLeft className="h-4 w-4" />
             Voltar aos Atendentes
@@ -400,9 +451,10 @@ export function LancamentoPage({
         {semanas.map((atendimentos, semanaIdx) => {
           const dados = dadosPorSemana[semanaIdx] ?? dadosSemanaVazio();
           return (
-            <Card className="bg-card border-border mb-8" key={semanaIdx}>
+            <Card className="bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800 mb-8" key={semanaIdx}>
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="flex items-center gap-2">
+                  <span className="w-3 h-3 rounded-full bg-blue-500 animate-pulse"></span>
                   ATENDIMENTOS - OPA
                   <span className="ml-2 text-xs font-normal text-muted-foreground">Semana {semanaIdx + 1}</span>
                   <Popover>
@@ -548,11 +600,14 @@ export function LancamentoPage({
         {semanas.map((atendimentos, semanaIdx) => {
           const dados = dadosPorSemana[semanaIdx] ?? dadosSemanaVazio();
           return (
-            <Card className="bg-card border-border mb-8" key={"ligacao-" + semanaIdx}>
+            <Card className="bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800 mb-8" key={"ligacao-" + semanaIdx}>
               <CardHeader>
                 <CardTitle>
-                  ATENDIMENTOS - LIGAÇÕES
-                  <span className="ml-2 text-xs font-normal text-muted-foreground">Semana {semanaIdx + 1}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="w-3 h-3 rounded-full bg-green-500 animate-pulse"></span>
+                    ATENDIMENTOS - LIGAÇÕES
+                    <span className="ml-2 text-xs font-normal text-muted-foreground">Semana {semanaIdx + 1}</span>
+                  </div>
                   {datasSemanas[semanaIdx]?.start && datasSemanas[semanaIdx]?.end && (
                     <Badge className="ml-2 px-3 py-1 text-base font-bold bg-blue-600 text-white rounded shadow">
                       {datasSemanas[semanaIdx].start!.toLocaleDateString()} até {datasSemanas[semanaIdx].end!.toLocaleDateString()}

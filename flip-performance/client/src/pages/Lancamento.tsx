@@ -133,6 +133,8 @@ export default function Lancamento() {
           }}
           isLoading={createMutation.isPending || updateMutation.isPending}
           atendimentosDetalhados={atendimentosDetalhados.data || []}
+          mes={mes}
+          ano={ano}
         />
       ) : (
         <div className="space-y-6">
